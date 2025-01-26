@@ -15,6 +15,7 @@ import me.kteq.hiddenarmor.listener.InventoryShiftClickListener;
 import me.kteq.hiddenarmor.listener.packet.ArmorOthersPacketListener;
 import me.kteq.hiddenarmor.listener.packet.ArmorSelfPacketListener;
 import me.kteq.hiddenarmor.manager.HiddenArmorManager;
+import me.kteq.hiddenarmor.listener.DamageListener;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -22,7 +23,7 @@ import java.util.logging.Level;
 
 public final class HiddenArmor extends JavaPlugin {
     private HiddenArmorManager hiddenArmorManager;
-
+    private DamageListener damageListener;
     private boolean isOld;
 
     @Override
@@ -58,6 +59,7 @@ public final class HiddenArmor extends JavaPlugin {
         new GameModeListener(this);
         new PotionEffectListener(this);
         new EntityToggleGlideListener(this);
+        this.damageListener = new DamageListener(this);
 
         getCommand("hiddenarmor").setTabCompleter(new HiddenArmorTabCompleter(this));
 
@@ -67,6 +69,9 @@ public final class HiddenArmor extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (damageListener != null) {
+            damageListener.cleanup();
+        }
         hiddenArmorManager.saveCurrentEnabledPlayers();
     }
 

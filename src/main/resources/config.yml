@@ -18,6 +18,21 @@ ignore:
   # If this is set to false, the elytra will only be hidden to other players due to minecraft limitations.
   elytra: false
 
+# Damage related settings
+damage-unhide:
+  # If enabled, armor will be unhidden when the player takes damage from specified sources
+  enabled: true
+  # Unhide armor when damaged by another player
+  player-damage: true
+  # Unhide armor when damaged by mobs or other entities
+  entity-damage: true
+  # Unhide armor when damaged by environmental causes (fall damage, fire, drowning, etc)
+  environmental-damage: false
+  # How long the armor should stay visible after taking damage (in ticks, 20 ticks = 1 second)
+  # 0: Infinite duration (armor stays visible until manually hidden)
+  # >0: Number of ticks to show armor before automatically hiding it again
+  # Default: 200 ticks (10 seconds)
+  visibility-duration: 200
 
 # Set to true if you want the command to be allowed to all players by default or to false if you want
 # the command to be allowed only to OPs and players with its permission.
@@ -38,4 +53,4 @@ locale:
   default-locale: 'en-us'
 
 # Used to inform when a new config update is available, don't change this
-config-version: 2
+config-version: 3

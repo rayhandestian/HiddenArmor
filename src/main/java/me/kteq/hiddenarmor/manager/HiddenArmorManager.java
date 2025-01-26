@@ -3,12 +3,14 @@ package me.kteq.hiddenarmor.manager;
 import me.kteq.hiddenarmor.HiddenArmor;
 import me.kteq.hiddenarmor.handler.ArmorPacketHandler;
 import me.kteq.hiddenarmor.handler.MessageHandler;
+import me.kteq.hiddenarmor.event.ArmorVisibilityChangeEvent;
 import net.md_5.bungee.api.ChatMessageType;
 import org.bukkit.GameMode;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.Bukkit;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,6 +55,9 @@ public class HiddenArmorManager {
 
         this.enabledPlayersUUID.add(player.getUniqueId());
         ArmorPacketHandler.getInstance().updatePlayer(player);
+        
+        // Call event for other listeners
+        Bukkit.getPluginManager().callEvent(new ArmorVisibilityChangeEvent(player, true));
     }
 
     public void disablePlayer(Player player, boolean inform) {
@@ -65,6 +70,9 @@ public class HiddenArmorManager {
 
         enabledPlayersUUID.remove(player.getUniqueId());
         ArmorPacketHandler.getInstance().updatePlayer(player);
+        
+        // Call event for other listeners
+        Bukkit.getPluginManager().callEvent(new ArmorVisibilityChangeEvent(player, false));
     }
 
     public boolean isEnabled(Player player) {
