@@ -33,6 +33,8 @@ damage-unhide:
   # >0: Number of ticks to show armor before automatically hiding it again
   # Default: 200 ticks (10 seconds)
   visibility-duration: 200
+  # Whether to show action bar messages when armor is unhidden/hidden by damage
+  notify: true
 
 # Set to true if you want the command to be allowed to all players by default or to false if you want
 # the command to be allowed only to OPs and players with its permission.

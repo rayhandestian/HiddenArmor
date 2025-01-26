@@ -100,6 +100,7 @@ public class DamageListener implements Listener {
             // Use 0 for infinite duration (no auto re-hide)
             // Use greater than 0 for timed duration in ticks
             int duration = plugin.getConfig().getInt("damage-unhide.visibility-duration", 200);
+            boolean notify = plugin.getConfig().getBoolean("damage-unhide.notify", true);
             
             // Cancel any existing re-hide task first (if any)
             BukkitTask existingTask = reHideTasks.remove(player.getUniqueId());
@@ -108,7 +109,7 @@ public class DamageListener implements Listener {
             }
 
             // Unhide the armor (even if it's already unhidden, this is fine)
-            hiddenArmorManager.disablePlayer(player, false);
+            hiddenArmorManager.disablePlayer(player, notify);
 
             // If duration > 0, schedule a new re-hide task
             if (duration > 0) {
@@ -119,7 +120,7 @@ public class DamageListener implements Listener {
                         try {
                             // Check if player is still online and valid
                             if (player.isOnline() && !player.isDead()) {
-                                hiddenArmorManager.enablePlayer(player, false);
+                                hiddenArmorManager.enablePlayer(player, notify);
                             }
                         } finally {
                             // Always clean up the task from the map
