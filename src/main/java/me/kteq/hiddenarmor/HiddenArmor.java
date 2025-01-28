@@ -16,6 +16,7 @@ import me.kteq.hiddenarmor.listener.packet.ArmorOthersPacketListener;
 import me.kteq.hiddenarmor.listener.packet.ArmorSelfPacketListener;
 import me.kteq.hiddenarmor.manager.HiddenArmorManager;
 import me.kteq.hiddenarmor.listener.DamageListener;
+import me.kteq.hiddenarmor.listener.PlayerConnectionListener;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -59,6 +60,7 @@ public final class HiddenArmor extends JavaPlugin {
         new GameModeListener(this);
         new PotionEffectListener(this);
         new EntityToggleGlideListener(this);
+        new PlayerConnectionListener(this);
         this.damageListener = new DamageListener(this);
 
         getCommand("hiddenarmor").setTabCompleter(new HiddenArmorTabCompleter(this));
