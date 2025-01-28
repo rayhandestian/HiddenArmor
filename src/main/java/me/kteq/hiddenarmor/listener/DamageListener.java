@@ -77,6 +77,9 @@ public class DamageListener implements Listener {
         // Only check if the feature is enabled
         if (!plugin.getConfig().getBoolean("damage-unhide.enabled", true)) return;
 
+        // Only proceed if the player has manually hidden their armor
+        if (!hiddenArmorManager.isEnabled(player)) return;
+
         boolean shouldUnhide = false;
 
         if (event instanceof EntityDamageByEntityEvent) {
