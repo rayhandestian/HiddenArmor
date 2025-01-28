@@ -7,6 +7,7 @@ import me.kteq.hiddenarmor.event.ArmorVisibilityChangeEvent;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -69,7 +70,7 @@ public class DamageListener implements Listener {
         reHideTasks.clear();
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player)) return;
         Player player = (Player) event.getEntity();
@@ -79,6 +80,9 @@ public class DamageListener implements Listener {
 
         // Only proceed if the player has manually hidden their armor
         if (!hiddenArmorManager.isEnabled(player)) return;
+
+        // Don't process if damage is 0 or negative
+        if (event.getFinalDamage() <= 0) return;
 
         boolean shouldUnhide = false;
 
@@ -100,42 +104,35 @@ public class DamageListener implements Listener {
 
         if (shouldUnhide) {
             // Get visibility duration from config (in ticks, 20 ticks = 1 second)
-            // Use 0 for infinite duration (no auto re-hide)
-            // Use greater than 0 for timed duration in ticks
             int duration = plugin.getConfig().getInt("damage-unhide.visibility-duration", 200);
             boolean notify = plugin.getConfig().getBoolean("damage-unhide.notify", true);
             
-            // Cancel any existing re-hide task first (if any)
+            // Cancel any existing re-hide task first
             BukkitTask existingTask = reHideTasks.remove(player.getUniqueId());
             if (existingTask != null) {
                 existingTask.cancel();
             }
 
-            // Unhide the armor (even if it's already unhidden, this is fine)
+            // Unhide the armor
             hiddenArmorManager.disablePlayer(player, notify);
 
-            // If duration > 0, schedule a new re-hide task
+            // Schedule re-hide if duration > 0
             if (duration > 0) {
-                // Create new re-hide task
                 BukkitTask task = new BukkitRunnable() {
                     @Override
                     public void run() {
                         try {
-                            // Check if player is still online and valid
                             if (player.isOnline() && !player.isDead()) {
                                 hiddenArmorManager.enablePlayer(player, notify);
                             }
                         } finally {
-                            // Always clean up the task from the map
                             reHideTasks.remove(player.getUniqueId());
                         }
                     }
-                }.runTaskLater(plugin, duration); // Duration is already in ticks
+                }.runTaskLater(plugin, duration);
 
-                // Store the new task
                 reHideTasks.put(player.getUniqueId(), task);
             }
-            // If duration is 0, do nothing (armor stays visible until manually hidden)
         }
     }
 } 
