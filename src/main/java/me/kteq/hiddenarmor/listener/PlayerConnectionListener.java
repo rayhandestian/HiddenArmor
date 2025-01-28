@@ -23,6 +23,7 @@ public class PlayerConnectionListener implements Listener {
     private final Map<UUID, Long> lastTeleportUpdate;
     private final Map<UUID, BukkitTask> pendingTeleportTasks;
     private static final long TELEPORT_COOLDOWN = 100L; // 100ms cooldown
+    private static final int[] UPDATE_TICKS = {1, 3, 5, 10}; // Multiple update attempts
 
     public PlayerConnectionListener(HiddenArmor plugin) {
         this.plugin = plugin;
@@ -37,18 +38,11 @@ public class PlayerConnectionListener implements Listener {
         Player player = event.getPlayer();
         if (!hiddenArmorManager.isArmorHidden(player)) return;
 
-        // Delay the update slightly to ensure all inventory contents are properly loaded
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (player.isOnline() && hiddenArmorManager.isArmorHidden(player)) {
-                    ArmorPacketHandler.getInstance().updateSelf(player);
-                }
-            }
-        }.runTaskLater(plugin, 5L); // 5 tick delay (0.25 seconds)
+        // Schedule multiple updates to ensure armor stays hidden
+        scheduleMultipleUpdates(player, new int[]{5, 10, 15});
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
         if (!hiddenArmorManager.isArmorHidden(player)) return;
@@ -65,24 +59,41 @@ public class PlayerConnectionListener implements Listener {
         // Check if we're updating too frequently
         Long lastUpdate = lastTeleportUpdate.get(playerId);
         if (lastUpdate != null && currentTime - lastUpdate < TELEPORT_COOLDOWN) {
-            // Schedule a single delayed update
-            BukkitTask task = new BukkitRunnable() {
-                @Override
-                public void run() {
-                    if (player.isOnline() && hiddenArmorManager.isArmorHidden(player)) {
-                        ArmorPacketHandler.getInstance().updateSelf(player);
-                        lastTeleportUpdate.put(playerId, System.currentTimeMillis());
-                    }
-                    pendingTeleportTasks.remove(playerId);
-                }
-            }.runTaskLater(plugin, 2L);
-            
-            pendingTeleportTasks.put(playerId, task);
+            // Schedule multiple updates
+            scheduleMultipleUpdates(player, UPDATE_TICKS);
             return;
         }
 
-        // Update immediately if we're outside the cooldown
+        // Update immediately and schedule follow-up updates
         lastTeleportUpdate.put(playerId, currentTime);
         ArmorPacketHandler.getInstance().updateSelf(player);
+        scheduleMultipleUpdates(player, UPDATE_TICKS);
+    }
+
+    private void scheduleMultipleUpdates(Player player, int[] delays) {
+        UUID playerId = player.getUniqueId();
+        
+        // Schedule a series of updates
+        new BukkitRunnable() {
+            private int updateIndex = 0;
+            
+            @Override
+            public void run() {
+                if (!player.isOnline() || !hiddenArmorManager.isArmorHidden(player)) {
+                    this.cancel();
+                    pendingTeleportTasks.remove(playerId);
+                    return;
+                }
+
+                ArmorPacketHandler.getInstance().updateSelf(player);
+                lastTeleportUpdate.put(playerId, System.currentTimeMillis());
+
+                updateIndex++;
+                if (updateIndex >= delays.length) {
+                    this.cancel();
+                    pendingTeleportTasks.remove(playerId);
+                }
+            }
+        }.runTaskTimer(plugin, delays[0], Math.max(1, delays[1] - delays[0]));
     }
 } 
