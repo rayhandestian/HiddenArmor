@@ -12,15 +12,20 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.WeakHashMap;
 
 public class ArmorPacketHandler {
     private static ArmorPacketHandler instance;
-
     private HiddenArmor plugin;
     private ProtocolManager protocolManager;
+    private final WeakHashMap<Player, Long> lastUpdateTime;
+    private static final long UPDATE_COOLDOWN = 50L; // 50ms cooldown between updates
 
-    private ArmorPacketHandler() {}
+    private ArmorPacketHandler() {
+        this.lastUpdateTime = new WeakHashMap<>();
+    }
 
     public static ArmorPacketHandler getInstance() {
         if (instance == null) {
@@ -34,25 +39,34 @@ public class ArmorPacketHandler {
         this.protocolManager = protocolManager;
     }
 
-
     public void updatePlayer(Player player) {
+        // Check if we're updating too frequently
+        long currentTime = System.currentTimeMillis();
+        Long lastUpdate = lastUpdateTime.get(player);
+        if (lastUpdate != null && currentTime - lastUpdate < UPDATE_COOLDOWN) {
+            return;
+        }
+        lastUpdateTime.put(player, currentTime);
+
         updateSelf(player);
         updateOthers(player);
     }
 
     public void updateSelf(Player player) {
         PlayerInventory inv = player.getInventory();
-        for(int i = 5; i<=8;i++){
-            PacketContainer packetSelf = protocolManager.createPacket(PacketType.Play.Server.SET_SLOT);
-            packetSelf.getIntegers().write(0, 0);
-            if(!plugin.isOld())
-                packetSelf.getIntegers().write(2, i);
-            else
-                packetSelf.getIntegers().write(1,i);
+        // Update only armor slots (5-8)
+        for (int i = 5; i <= 8; i++) {
+            PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.SET_SLOT);
+            packet.getIntegers().write(0, 0);
+            if (!plugin.isOld()) {
+                packet.getIntegers().write(2, i);
+            } else {
+                packet.getIntegers().write(1, i);
+            }
             ItemStack armor = ProtocolUtil.getArmor(ProtocolUtil.ArmorType.getType(i), inv);
-            packetSelf.getItemModifier().write(0, armor);
+            packet.getItemModifier().write(0, armor);
             try {
-                protocolManager.sendServerPacket(player, packetSelf);
+                protocolManager.sendServerPacket(player, packet);
             } catch (InvocationTargetException e) {
                 e.printStackTrace();
             }
@@ -63,14 +77,31 @@ public class ArmorPacketHandler {
         PlayerInventory inv = player.getInventory();
         PacketContainer packetOthers = protocolManager.createPacket(PacketType.Play.Server.ENTITY_EQUIPMENT);
         packetOthers.getIntegers().write(0, player.getEntityId());
-        List<Pair<EnumWrappers.ItemSlot, ItemStack>> pairList = packetOthers.getSlotStackPairLists().read(0);
-        pairList.add(new Pair<>(EnumWrappers.ItemSlot.HEAD, ProtocolUtil.getArmor(ProtocolUtil.ArmorType.HELMET, inv)));
-        pairList.add(new Pair<>(EnumWrappers.ItemSlot.CHEST, ProtocolUtil.getArmor(ProtocolUtil.ArmorType.CHEST, inv)));
-        pairList.add(new Pair<>(EnumWrappers.ItemSlot.LEGS, ProtocolUtil.getArmor(ProtocolUtil.ArmorType.LEGGS, inv)));
-        pairList.add(new Pair<>(EnumWrappers.ItemSlot.FEET, ProtocolUtil.getArmor(ProtocolUtil.ArmorType.BOOTS, inv)));
-        pairList.add(new Pair<>(EnumWrappers.ItemSlot.MAINHAND, player.getInventory().getItemInMainHand().clone()));
-        pairList.add(new Pair<>(EnumWrappers.ItemSlot.OFFHAND, player.getInventory().getItemInOffHand().clone()));
-        packetOthers.getSlotStackPairLists().write(0, pairList);
-        ProtocolUtil.broadcastPlayerPacket(protocolManager, packetOthers, player);
+        
+        List<Pair<EnumWrappers.ItemSlot, ItemStack>> pairList = new ArrayList<>();
+        
+        // Only send armor updates
+        ItemStack helmet = inv.getHelmet();
+        ItemStack chestplate = inv.getChestplate();
+        ItemStack leggings = inv.getLeggings();
+        ItemStack boots = inv.getBoots();
+        
+        if (helmet != null && !helmet.getType().isAir()) {
+            pairList.add(new Pair<>(EnumWrappers.ItemSlot.HEAD, helmet.clone()));
+        }
+        if (chestplate != null && !chestplate.getType().isAir()) {
+            pairList.add(new Pair<>(EnumWrappers.ItemSlot.CHEST, chestplate.clone()));
+        }
+        if (leggings != null && !leggings.getType().isAir()) {
+            pairList.add(new Pair<>(EnumWrappers.ItemSlot.LEGS, leggings.clone()));
+        }
+        if (boots != null && !boots.getType().isAir()) {
+            pairList.add(new Pair<>(EnumWrappers.ItemSlot.FEET, boots.clone()));
+        }
+        
+        if (!pairList.isEmpty()) {
+            packetOthers.getSlotStackPairLists().write(0, pairList);
+            ProtocolUtil.broadcastPlayerPacket(protocolManager, packetOthers, player);
+        }
     }
 }
