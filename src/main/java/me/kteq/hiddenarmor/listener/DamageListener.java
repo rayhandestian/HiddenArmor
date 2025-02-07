@@ -15,6 +15,7 @@ import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.event.EventPriority;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -69,9 +70,10 @@ public class DamageListener implements Listener {
         reHideTasks.clear();
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onEntityDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player)) return;
+        if (event.isCancelled()) return;
         Player player = (Player) event.getEntity();
         
         // Only check if the feature is enabled
